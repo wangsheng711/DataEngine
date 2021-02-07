@@ -4,4 +4,3 @@ sum = 0
 for x in np.arange(2,101,2):
 	sum = sum + x
 print(sum)
-
