@@ -1,49 +1,26 @@
-#课程作业3 对汽车质量数据进行统计
-
+# Action3: 对汽车质量数据进行统计
 import pandas as pd
-import numpy as np
 
-carBrandProDType = np.dtype({'names': ['brand', 'typenum', 'pronum', 'ave'],
-                                 'formats': ['U32', 'i', 'i', 'f']})
-carModelProDType = np.dtype({'names': ['model', 'pronum'],
-                                 'formats': ['U32', 'i']})
-carBrandPro = []
-carModelPro = []
-carData = pd.read_csv("C:\Users\IMBAQ\Downloads\homework\L1\car_data_analyze/car_complain.csv")
-carDataTmp = carData.set_index(['brand', 'car_model'])['problem'].str.rstrip(',').str.split(',', expand=True).stack().reset_index(-1, drop=True).reset_index(name="problem")
-carBrand = carDataTmp.groupby('brand')
+# 数据加载
+df = pd.read_csv('./car_complain.csv')
 
-for brandName, brandData in carBrand:
-    brandProNum = 0
-    modelNum = 0
-    carBrandModel = brandData.groupby('car_model')
-    for modelName, modelData in carBrandModel:
-        modeProNum = len(modelData)
-        brandProNum += modeProNum
-        modelNum += 1
-        carModelPro.append((modelName, modeProNum))
-    carBrandPro.append((brandName, modelNum, brandProNum, 0.))
-carBrandProCal = np.array(carBrandPro, dtype=carBrandProDType)
-carModelProCal = np.array(carModelPro, dtype=carModelProDType)
-carBrandProCal['ave'] = np.divide(carBrandProCal['pronum'], carBrandProCal['typenum'])
-print("品牌投诉总数：")
-sortIdx = carBrandProCal['pronum'].argsort()
-for idx in sortIdx:
-    print(carBrandProCal[idx]['brand'], ': ', carBrandProCal[idx]['pronum'])
-print("\n车型投诉总数：")
-sortIdx = carModelProCal['pronum'].argsort()
-for idx in sortIdx:
-    print(carModelProCal[idx]['model'], ': ', carModelProCal[idx]['pronum'])
-print("\n平均车型投诉数量：")
-sortIdx = carBrandProCal['ave'].argsort()
-for idx in sortIdx:
-    print(carBrandProCal[idx]['brand'], ': ', carBrandProCal[idx]['ave'])
-print(carBrandProCal[sortIdx[-1]]['brand'], ': ', carBrandProCal[sortIdx[-1]]['ave'])
+# 数据预处理，拆分problem类型至多个字段，0代表无，1代表有，拆分problem列的问题，按逗号分隔
+df = df.drop('problem',axis=1).join(df.problem.str.get_dummies(','))
+# 数据清洗，别名合并
+def f(x):
+    x = x.replace('一汽-大众','一汽大众')
+    return x
+df['brand'] = df['brand'].apply(f)
+tags = df.columns[7:]
 
+# 计算每个车型投诉数量
+result1 = df.groupby(['brand','car_model'])[tags].agg(['sum'])
+# 按行求和
+result1 = result1.sum(1)
+print('每个车型投诉数量：','\n',result1)
 
-
-
-
-
-
-
+# 计算各品牌平均车型投诉量并排序
+result4 = pd.merge(result2,result3,left_index=True,right_index=True,how='outer')
+result4 = result4['sum']/result4['car_model']
+result4 = result4.sort_values(0, ascending=False).round(2)
+print('各品牌平均车型投诉量：','\n',result4)
